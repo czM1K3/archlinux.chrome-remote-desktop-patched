@@ -7,7 +7,7 @@ post_install() {
   printf "$(tput setaf 4)as a normal user.$(tput sgr0)\n\n"
   printf "$(tput setaf 4)After that, enable access to CRD in your chrome or chromium browser.$(tput sgr0)\n\n"
   printf "$(tput setaf 4)To {enable,start} the service, issue the command:$(tput sgr0)\n"
-  printf "$(tput setaf 2)systemctl --user {enable,start} chrome-remote-desktop$(tput sgr0)\n"
+  printf "$(tput setaf 2)systemctl --user {enable,start} chrome-remote-desktop-patched$(tput sgr0)\n"
   printf "$(tput setaf 4)This only really makes sense for servers.$(tput sgr0)\n\n"
   printf "$(tput setaf 4)You can also start the chrome remote desktop server by issuing the command:$(tput sgr0)\n"
   printf "$(tput setaf 2)crd --start$(tput sgr0)\n"
