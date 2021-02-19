@@ -4,7 +4,7 @@
 # Contributor: James An <james@jamesan.ca>
 # Contributor: Mateus Rodrigues Costa <charles [dot] costar [at] gmail [dot] com>
 
-pkgname=chrome-remote-desktop
+pkgname=chrome-remote-desktop-patched
 pkgver=88.0.4324.34
 pkgrel=1
 pkgdesc="Access other computers or allow another user to access your computer securely over the Internet"
@@ -12,10 +12,10 @@ arch=("x86_64")
 url="https://remotedesktop.google.com"
 license=("BSD")
 depends=("gtk3" "libxss" "nss" "python-psutil" "xorg-server-xvfb" "xorg-setxkbmap" "xorg-xauth" "xorg-xdpyinfo" "xorg-xrandr")
-install="${pkgname}.install"
+install="${pkgname:0:21}.install"
 source=(
-  "${pkgname}-${pkgver}.deb::https://dl.google.com/linux/${pkgname}/deb/pool/main/${pkgname:0:1}/${pkgname}/${pkgname}_${pkgver}_amd64.deb"
-  "${pkgname}.service"
+  "${pkgname:0:21}-${pkgver}.deb::https://dl.google.com/linux/${pkgname:0:21}/deb/pool/main/${pkgname:0:1}/${pkgname:0:21}/${pkgname:0:21}_${pkgver}_amd64.deb"
+  "${pkgname:0:21}.service"
   "pamrule"
   "crd"
 )
@@ -32,6 +32,12 @@ build() {
   cd "${srcdir}"
 
   bsdtar -xf data.tar.xz -C .
+
+  # Patch for duplicating existing session
+  sed -i -e 's#FIRST_X_DISPLAY_NUMBER = 20#FIRST_X_DISPLAY_NUMBER = 20\nEXISTING_X_DISPLAY_FILE_PATH = os.path.join(CONFIG_DIR, "Xsession")\nX_SESSION_FILE_TEMPLATE = "/tmp/.X11-unix/X%d"#g' opt/google/chrome-remote-desktop/chrome-remote-desktop
+sed -i -e 's#raise Exception("Could not start X session")#raise Exception("Could not start X session")\n\n  def _use_existing_session(self):\n    with open(EXISTING_X_DISPLAY_FILE_PATH) as fh:\n      display = int(fh.readline().rstrip())\n    if not os.path.exists(X_SESSION_FILE_TEMPLATE % display):\n      logging.error("Xorg session file doesn t exist")\n      sys.exit(1)\n    logging.info("Using existing Xorg session: %d" % display)\n    self.child_env["DISPLAY"] = ":%d" % display\n    self.child_env["CHROME_REMOTE_DESKTOP_SESSION"] = "1"\n#g' opt/google/chrome-remote-desktop/chrome-remote-desktop
+sed -i -e 's#    self._launch_x_server(x_args)#    if os.path.exists(EXISTING_X_DISPLAY_FILE_PATH):\n      self._use_existing_session()\n    else:\n      self._launch_x_server(x_args)\n #g' opt/google/chrome-remote-desktop/chrome-remote-desktop
+sed -i -e 's#    self._launch_x_session()#      self._launch_x_session()#g' opt/google/chrome-remote-desktop/chrome-remote-desktop
   
   # Removing unnecessary .deb related files
   rm -R "${srcdir}/etc/cron.daily"
@@ -46,9 +52,9 @@ package() {
   install -d "${pkgdir}/opt"
   cp -r "${srcdir}/etc/"* "${pkgdir}/etc"
   cp -r "${srcdir}/opt/"* "${pkgdir}/opt"
-  install -Dm644 "${srcdir}/usr/share/doc/${pkgname}/copyright" "${pkgdir}/usr/share/licenses/${pkgname}/copyright"
-  install -Dm644 "${srcdir}/${pkgname}.service" "${pkgdir}/usr/lib/systemd/user/${pkgname}.service"
-  install -Dm644 "${srcdir}/pamrule" "${pkgdir}/etc/pam.d/${pkgname}"
+  install -Dm644 "${srcdir}/usr/share/doc/${pkgname:0:21}/copyright" "${pkgdir}/usr/share/licenses/${pkgname:0:21}/copyright"
+  install -Dm644 "${srcdir}/${pkgname:0:21}.service" "${pkgdir}/usr/lib/systemd/user/${pkgname}.service"
+  install -Dm644 "${srcdir}/pamrule" "${pkgdir}/etc/pam.d/${pkgname:0:21}"
   install -Dm755 "${srcdir}/crd" "${pkgdir}/usr/bin/crd"
   install -dm755 "${pkgdir}/etc/chromium/native-messaging-hosts"
   
@@ -58,5 +64,5 @@ package() {
       ln -s "/etc/opt/chrome/native-messaging-hosts/${_filename}" "${pkgdir}/etc/chromium/native-messaging-hosts/${_filename}"
     fi
   done
-  chmod u+s "${pkgdir}/opt/google/${pkgname}/user-session"
+  chmod u+s "${pkgdir}/opt/google/${pkgname:0:21}/user-session"
 }
